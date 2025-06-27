@@ -1,0 +1,49 @@
+import nltk
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+nltk.download('punkt')
+nltk.download('stopwords')
+
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import string
+
+faqs = {
+    "What is your return policy?": "Our return policy allows returns within 30 days of purchase.",
+    "How can I reset my password?": "You can reset your password from the login page using 'Forgot Password'.",
+    "Do you offer international shipping?": "Yes, we ship to over 50 countries worldwide.",
+    "How can I contact customer support?": "You can contact us via email or live chat 24/7.",
+    "What payment methods are accepted?": "We accept Visa, MasterCard, PayPal and UPI."
+}
+
+faq_questions = list(faqs.keys())
+faq_answers = list(faqs.values())
+
+def preprocess(text):
+    tokens = word_tokenize(text.lower())
+    stop_words = set(stopwords.words('english'))
+    words = [w for w in tokens if w not in stop_words and w not in string.punctuation]
+    return " ".join(words)
+
+preprocessed_questions = [preprocess(q) for q in faq_questions]
+vectorizer = TfidfVectorizer()
+vectors = vectorizer.fit_transform(preprocessed_questions)
+
+def chatbot_response(user_input):
+    user_input_clean = preprocess(user_input)
+    user_vec = vectorizer.transform([user_input_clean])
+    similarities = cosine_similarity(user_vec, vectors)
+    index = similarities.argmax()
+    score = similarities[0][index]
+    if score > 0.3:
+        return faq_answers[index]
+    else:
+        return "I'm sorry, I couldn't find an answer to that question."
+
+print("Welcome to FAQ Chatbot! Type 'exit' to quit.")
+while True:
+    user_input = input("You: ")
+    if user_input.lower() == "exit":
+        break
+    print("Bot:", chatbot_response(user_input))
